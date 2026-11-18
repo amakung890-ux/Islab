@@ -1,0 +1,746 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>แล็บผักบุ้งจีน</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Prompt:wght@500;600&family=Sarabun:wght@400;500;600&display=swap">
+<style>
+/* Layout: ตั้งค่า + สภาพอากาศ → ตัวควบคุมเวลา → กระถางเทียบกัน → ตารางสรุป → กราฟ 2x2 */
+:root {
+  --bg: #F1F5EF; --surface: #FFFFFF; --surface-2: #E7EEE4; --fg: #15231B; --muted: #58695E; --line: #D2DCCF;
+  --btn-bg: #173A2C; --btn-fg: #F1F5EF; --focus: #1F6B4A;
+  --c-compost: #0E7A6B; --c-manure: #B26A0F; --c-control: #5F6F8F; --mark: #7442B5;
+  --sun: #D9A21B; --rain: #3B7DD8; --hot: #C2503A; --cold: #4B7FB5;
+  --pot: #C49A6C; --pot-rim: #D8B58A; --soil: #4A3A2E; --stem: #6FA05A;
+  --font-display: 'Prompt', 'Noto Sans Thai', system-ui, sans-serif;
+  --font-body: 'Sarabun', 'Noto Sans Thai', system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E1611; --surface: #16211A; --surface-2: #1D2B22; --fg: #E4EEE6; --muted: #9BAFA1; --line: #2A3B30;
+    --btn-bg: #E4EEE6; --btn-fg: #0E1611; --focus: #7CD0A6;
+    --c-compost: #43C2AE; --c-manure: #E3A24A; --c-control: #9AAACC; --mark: #B79BEA;
+    --sun: #E7B640; --rain: #6CA6EE; --hot: #E27A63; --cold: #7FAEDD;
+    --pot: #8A6746; --pot-rim: #A27D57; --soil: #2A2018; --stem: #6FA05A;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E1611; --surface: #16211A; --surface-2: #1D2B22; --fg: #E4EEE6; --muted: #9BAFA1; --line: #2A3B30;
+  --btn-bg: #E4EEE6; --btn-fg: #0E1611; --focus: #7CD0A6;
+  --c-compost: #43C2AE; --c-manure: #E3A24A; --c-control: #9AAACC; --mark: #B79BEA;
+  --sun: #E7B640; --rain: #6CA6EE; --hot: #E27A63; --cold: #7FAEDD;
+  --pot: #8A6746; --pot-rim: #A27D57; --soil: #2A2018; --stem: #6FA05A;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 16px; line-height: 1.65;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px 56px; }
+.wrap { max-width: 1080px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 600; margin: 0; text-wrap: balance; line-height: 1.3; }
+h1 { font-size: clamp(1.9rem, 5vw, 2.7rem); }
+h2 { font-size: 1.12rem; }
+p { margin: 0; }
+.eyebrow { font-size: .8rem; letter-spacing: .08em; color: var(--muted); font-weight: 600; }
+.lede { max-width: 62ch; color: var(--muted); margin-top: 6px; }
+button, select, input { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.sub { color: var(--muted); font-size: .88rem; }
+
+/* settings + weather */
+.setup { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 16px; }
+.fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px; }
+.field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.field label, .field .lab { font-size: .85rem; font-weight: 600; display: flex; justify-content: space-between; gap: 8px; }
+.field output { font-family: var(--font-display); font-weight: 500; font-variant-numeric: tabular-nums; }
+.field select, .field input[type=number] { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 7px 8px; min-width: 0; width: 100%; }
+.field input[type=range] { accent-color: var(--focus); width: 100%; margin: 4px 0; }
+.field .hint { font-size: .78rem; color: var(--muted); line-height: 1.4; }
+.span2 { grid-column: 1 / -1; }
+.check { display: flex; align-items: center; gap: 8px; font-size: .9rem; }
+.btn { background: var(--btn-bg); color: var(--btn-fg); border: 0; border-radius: 6px; padding: 9px 16px; font-weight: 600; cursor: pointer; }
+.btn.ghost { background: transparent; color: var(--fg); border: 1px solid var(--line); }
+.btn:hover { filter: brightness(1.12); }
+.controlled { border-top: 1px solid var(--line); padding-top: 12px; display: flex; flex-direction: column; gap: 4px; font-size: .88rem; }
+.controlled strong { font-family: var(--font-display); font-weight: 500; font-size: .9rem; }
+.controlled ul { margin: 0; padding-left: 1.15em; color: var(--muted); }
+
+/* player */
+.player { display: grid; grid-template-columns: auto 1fr; gap: 12px 24px; align-items: center; }
+.dayread { display: flex; align-items: baseline; gap: 8px; font-family: var(--font-display); }
+.dayread .lbl { color: var(--muted); font-size: .95rem; }
+.dayread #dayNum { font-size: 3rem; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; min-width: 2ch; text-align: right; }
+.dayread .of { color: var(--muted); }
+.ctrls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.seg button { background: transparent; border: 0; padding: 8px 12px; cursor: pointer; font-variant-numeric: tabular-nums; }
+.seg button[aria-pressed=true] { background: var(--surface-2); font-weight: 600; }
+.step { width: 40px; padding: 8px 0; text-align: center; }
+.scrub { grid-column: 1 / -1; position: relative; padding-bottom: 20px; }
+.scrub input { width: 100%; accent-color: var(--focus); margin: 0; }
+.scrub .fmark { position: absolute; top: 22px; transform: translateX(-50%); font-size: .75rem; color: var(--mark); font-weight: 600; white-space: nowrap; }
+.scrub .fmark::before { content: ""; display: block; width: 2px; height: 8px; background: var(--mark); margin: -10px auto 2px; }
+.phase { grid-column: 1 / -1; background: var(--surface-2); border-radius: 6px; padding: 8px 12px; font-size: .92rem; }
+
+/* pots */
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: .85rem; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.swatch { width: 22px; height: 0; border-top: 3px solid; display: inline-block; }
+.pots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.pot { margin: 0; background: var(--surface-2); border-radius: 8px; padding: 10px 8px 12px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.pot svg { width: 100%; height: auto; display: block; }
+.pot h3 { font-size: .98rem; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.pot .tag { font-family: var(--font-body); font-size: .7rem; font-weight: 600; padding: 1px 7px; border-radius: 99px; border: 1px solid currentColor; }
+.stats { display: grid; grid-template-columns: auto 1fr; gap: 0 8px; font-size: .86rem; font-variant-numeric: tabular-nums; }
+.stats dt { color: var(--muted); } .stats dd { margin: 0; font-weight: 600; text-align: right; }
+.k-compost { color: var(--c-compost); } .k-manure { color: var(--c-manure); } .k-control { color: var(--c-control); }
+
+/* table */
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: .92rem; font-variant-numeric: tabular-nums; }
+th, td { padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { font-size: .8rem; color: var(--muted); font-weight: 600; }
+.verdict { font-size: .98rem; }
+.verdict b { font-weight: 600; }
+
+/* charts */
+.charts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.charts svg, .panel svg.wx { width: 100%; height: auto; display: block; overflow: visible; }
+.gl { stroke: var(--line); stroke-width: 1; }
+.tx { fill: var(--muted); font-size: 10.5px; font-family: var(--font-body); }
+.tx.c { text-anchor: middle; } .tx.e { text-anchor: end; }
+.ln { fill: none; stroke-linejoin: round; stroke-linecap: round; }
+.l-control { stroke: var(--c-control); stroke-dasharray: 4 3; } .l-compost { stroke: var(--c-compost); } .l-manure { stroke: var(--c-manure); }
+.f-control { fill: var(--c-control); } .f-compost { fill: var(--c-compost); } .f-manure { fill: var(--c-manure); }
+.shade { fill: var(--surface-2); }
+.fline { stroke: var(--mark); stroke-dasharray: 3 3; stroke-width: 1.2; }
+.ftx { fill: var(--mark); font-size: 10px; font-weight: 600; }
+
+.refs h3 { font-size: .98rem; margin-top: 4px; }
+table.lit td, table.lit th { white-space: normal; text-align: left; vertical-align: top; min-width: 7.5em; }
+table.lit td:first-child { min-width: 10em; }
+.st { display: inline-block; font-size: .72rem; font-weight: 600; padding: 1px 8px; border-radius: 99px; border: 1px solid currentColor; white-space: nowrap; }
+.st-src { color: var(--c-compost); } .st-mix { color: var(--c-manure); } .st-ass { color: var(--c-control); }
+.reflist { margin: 0; padding-left: 1.5em; display: flex; flex-direction: column; gap: 8px; font-size: .88rem; color: var(--muted); }
+.reflist a, .lit a, .note a { color: var(--focus); }
+.reflist li { scroll-margin-top: 16px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; }
+summary { cursor: pointer; font-family: var(--font-display); font-weight: 500; }
+.assume { display: flex; flex-direction: column; gap: 14px; margin-top: 12px; }
+.assume table input { width: 6.5em; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 5px 6px; text-align: right; }
+.assume ul { margin: 0; padding-left: 1.2em; color: var(--muted); font-size: .9rem; }
+.note { font-size: .88rem; color: var(--muted); max-width: 75ch; }
+.rowbtns { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+#copyBox { width: 100%; height: 6em; font: inherit; font-size: .8rem; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 6px; }
+
+@media (max-width: 760px) {
+  .setup, .charts { grid-template-columns: minmax(0, 1fr); }
+  .player { grid-template-columns: 1fr; }
+  .pots { gap: 8px; }
+  .pot { padding: 8px 4px 10px; }
+  .stats { font-size: .76rem; gap: 0 4px; }
+  .pot h3 { font-size: .85rem; }
+}
+@media (max-width: 460px) { .fields { grid-template-columns: 1fr; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">โครงงานเปรียบเทียบปุ๋ย</p>
+    <h1>แล็บผักบุ้งจีน</h1>
+    <p class="lede">จำลองการปลูกผักบุ้งจีน 30 วันในสภาพอากาศแบบไทย เปรียบเทียบปุ๋ยหมักกับปุ๋ยคอก โดยทุกชุดได้น้ำ แสงแดด และปริมาณปุ๋ยเท่ากัน ส่วนที่ต่างกันมีเพียงชนิดปุ๋ย แต่ละชุดปลูก 5 ต้นต่อกระถาง</p>
+  </header>
+
+  <section class="setup" aria-label="ตั้งค่าการทดลอง">
+    <div class="panel">
+      <h2>ตั้งค่าการทดลอง</h2>
+      <div class="fields">
+        <div class="field span2"><label for="season">ฤดูกาลที่ปลูก</label>
+          <select id="season">
+            <option value="cool">ฤดูหนาว (พ.ย.–ก.พ.)</option>
+            <option value="hot">ฤดูร้อน (มี.ค.–พ.ค.)</option>
+            <option value="rainy">ฤดูฝน (มิ.ย.–ต.ค.)</option>
+          </select></div>
+        <div class="field"><label for="water">รดน้ำ <output id="waterOut"></output></label>
+          <input type="range" id="water" min="2" max="8" step="0.5"><span class="hint">ทุกวัน 07:00 น. เท่ากันทุกชุด</span></div>
+        <div class="field"><label for="fertDay">ใส่ปุ๋ยหลังวันที่ <output id="fertDayOut"></output></label>
+          <input type="range" id="fertDay" min="5" max="14" step="1"><span class="hint">ก่อนหน้านี้ทุกชุดโตเท่ากัน</span></div>
+        <div class="field"><label for="dose">ปริมาณปุ๋ย <output id="doseOut"></output></label>
+          <input type="range" id="dose" min="0.5" max="3" step="0.5"><span class="hint">เท่ากันทั้งสองชนิด</span></div>
+        <div class="field"><label for="manureType">ชนิดปุ๋ยคอก</label>
+          <select id="manureType"><option value="cow">มูลวัว</option><option value="chicken">มูลไก่</option></select></div>
+        <div class="field span2 rowbtns">
+          <label class="check"><input type="checkbox" id="showControl" checked> แสดงชุดควบคุม (ไม่ใส่ปุ๋ย)</label>
+          <button class="btn ghost" id="reroll" type="button">สุ่มสภาพอากาศชุดใหม่</button>
+        </div>
+      </div>
+      <div class="controlled" id="controlled"></div>
+    </div>
+
+    <div class="panel">
+      <div><h2>สภาพอากาศ 30 วัน</h2><p class="sub" id="wxSummary"></p></div>
+      <svg class="wx" id="wxChart" role="img" aria-label="กราฟอุณหภูมิ ชั่วโมงแดด และปริมาณฝนตลอด 30 วัน" viewBox="0 0 360 222"></svg>
+    </div>
+  </section>
+
+  <section class="panel player" aria-label="ควบคุมการจำลอง">
+    <div class="dayread"><span class="lbl">วันที่</span><span id="dayNum">30</span><span class="of">/ 30</span></div>
+    <div class="ctrls">
+      <button class="btn" id="btnPlay" type="button">เล่นจำลอง</button>
+      <button class="btn ghost step" id="btnPrev" type="button" aria-label="ย้อนหนึ่งวัน">‹</button>
+      <button class="btn ghost step" id="btnNext" type="button" aria-label="เดินหน้าหนึ่งวัน">›</button>
+      <div class="seg" role="group" aria-label="ความเร็วในการเล่น">
+        <button type="button" data-speed="1" aria-pressed="true">1×</button>
+        <button type="button" data-speed="3" aria-pressed="false">3×</button>
+        <button type="button" data-speed="10" aria-pressed="false">10×</button>
+      </div>
+    </div>
+    <div class="scrub">
+      <input type="range" id="scrub" min="0" max="30" step="any" value="30" aria-label="เลื่อนดูวันที่ในการจำลอง">
+      <span class="fmark" id="fmark">ใส่ปุ๋ย</span>
+    </div>
+    <p class="phase" id="phase" aria-live="polite"></p>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:12px" aria-label="กระถางทดลอง">
+    <div class="legend" id="legend"></div>
+    <div class="pots" id="pots"></div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:10px" aria-label="สรุปผล">
+    <h2 id="sumTitle">สรุปผล</h2>
+    <div class="tablewrap"><table id="sumTable"></table></div>
+    <p class="verdict" id="verdict"></p>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:12px" aria-label="กราฟเปรียบเทียบ">
+    <h2>กราฟเปรียบเทียบ</h2>
+    <div class="charts">
+      <div class="panel"><h3>ส่วนสูงเฉลี่ย (ซม.)</h3><svg id="chH" role="img" aria-label="กราฟส่วนสูงเฉลี่ยของต้นผักบุ้งแต่ละชุด" viewBox="0 0 360 200"></svg></div>
+      <div class="panel"><h3>น้ำหนักสดต่อต้น (กรัม)</h3><svg id="chW" role="img" aria-label="กราฟน้ำหนักสดต่อต้นแต่ละชุด" viewBox="0 0 360 200"></svg></div>
+      <div class="panel"><h3>ไนโตรเจนที่พืชใช้ได้ในดิน (มก./กก.)</h3><svg id="chN" role="img" aria-label="กราฟไนโตรเจนในดินแต่ละชุด" viewBox="0 0 360 200"></svg></div>
+      <div class="panel"><h3>ความชื้นดิน (% ของความจุน้ำ)</h3><svg id="chM" role="img" aria-label="กราฟความชื้นดินแต่ละชุด" viewBox="0 0 360 200"></svg></div>
+    </div>
+  </section>
+
+  <section class="panel refs" aria-label="แหล่งอ้างอิง" id="refs">
+    <div><h2>แหล่งอ้างอิงและความน่าเชื่อถือของค่าในโมเดล</h2>
+      <p class="sub">ค่าแต่ละตัวมีสถานะระบุไว้ ตัวที่เป็น "สมมติ" ยังไม่มีงานวิจัยรองรับโดยตรง ควรแทนด้วยค่าที่วัดจากปุ๋ยและดินที่ใช้จริง</p></div>
+
+    <h3>ส่วนสูงเฉลี่ยรายสัปดาห์จากโมเดลนี้ (ซม.)</h3>
+    <div class="tablewrap"><table id="weekTable"></table></div>
+    <p class="note" id="weekNote"></p>
+
+    <h3>ส่วนสูงที่รายงานในงานวิจัย (เปรียบเทียบกับโมเดลด้านบน)</h3>
+    <div class="tablewrap"><table class="lit">
+      <thead><tr><th>งานวิจัย</th><th>ระบบปลูก</th><th>ส่วนสูงเฉลี่ยที่รายงาน</th><th>เพิ่มขึ้นต่อสัปดาห์</th></tr></thead>
+      <tbody>
+        <tr><td><a href="#ref1">[1]</a> Anukulprasert และคณะ 2015</td><td>ผักบุ้งจีน กระถาง 30 ซม. 5 ต้น/กระถาง รดน้ำทุกวัน</td><td>ที่ 25 วันหลังย้ายปลูก ไม่ใส่ปุ๋ย 12.4 ซม. มูลไก่ 19.6–20.4 ซม. ปุ๋ยอินทรีย์ 18.8–21.4 ซม.</td><td>ไม่ได้รายงานรายสัปดาห์</td></tr>
+        <tr><td><a href="#ref2">[2]</a> Fahri และคณะ 2026</td><td>ผักบุ้ง (<i>Ipomoea reptans</i>) ใส่ NPK หรือสารเสริมที่ 7 และ 14 วัน</td><td>วันที่ 7 ราว 10–12 ซม. วันที่ 28 ราว 35.7 ซม. วันที่ 35 ราว 44.8–46.1 ซม.</td><td>ราว 8–10 ซม. (คำนวณจากตัวเลขในงาน)</td></tr>
+        <tr><td><a href="#ref3">[3]</a> Lakitan และ Kartika 2020</td><td>ผักบุ้ง (<i>I. reptans</i>) กระถาง 30 ซม. 1–5 ต้น/กระถาง</td><td>ถึงราว 30 ซม. ที่ประมาณ 4 สัปดาห์ เก็บเกี่ยวครั้งแรก 30 วันหลังหว่านเมล็ด</td><td>ราว 7 ซม. (คำนวณจากตัวเลขในงาน)</td></tr>
+        <tr><td><a href="#ref5">[5]</a> งานปี 2023 ในกากแร่ทอง</td><td>ผักบุ้ง ถุง 1 กก. ใส่มูลวัว</td><td>สัปดาห์ที่ 1: 6–8 ซม. สัปดาห์ที่ 5: 11–18 ซม.</td><td>ราว 1.5–4 ซม. (ดินแย่ จึงโตช้า)</td></tr>
+      </tbody></table></div>
+    <p class="note">ส่วนสูงต่างกันมากระหว่างงาน (12–46 ซม.) เพราะต่างกันที่ดิน พันธุ์ ปุ๋ย และวิธีปลูก โมเดลนี้ปรับให้ชุดควบคุมและชุดใส่ปุ๋ย ณ วันที่ 25 ใกล้งาน [1] ซึ่งปลูกกระถางและใส่มูลสัตว์เหมือนโครงงานนี้ที่สุด และอัตราเพิ่มรายสัปดาห์อยู่ในช่วงที่รายงานไว้</p>
+
+    <h3>ค่าที่ใช้ในโมเดลและแหล่งที่มา</h3>
+    <div class="tablewrap"><table class="lit">
+      <thead><tr><th>ค่า</th><th>ในโมเดล</th><th>สถานะ</th><th>ที่มา</th></tr></thead>
+      <tbody>
+        <tr><td>ไนโตรเจนรวมในมูลไก่</td><td>1.7%</td><td><span class="st st-src">วัดจริง</span></td><td>วัดได้ 1.70% ใน [1] (งาน [4] อ้าง 2.2%)</td></tr>
+        <tr><td>ไนโตรเจนรวมในมูลวัว</td><td>1.5%</td><td><span class="st st-mix">มีช่วง</span></td><td>1.47% ใน [5] แต่ 0.86% ใน [9] และ 0.6% ใน [4] (อ้างจากงานอื่น)</td></tr>
+        <tr><td>ไนโตรเจนรวมในปุ๋ยหมัก</td><td>1.0%</td><td><span class="st st-mix">ค่าต่ำสุด</span></td><td>มาตรฐานปุ๋ยอินทรีย์ กรมวิชาการเกษตร กำหนดไนโตรเจนไม่น้อยกว่า 1.0% [6] ปุ๋ยหมักจริงอาจสูงกว่า เช่น 0.77–4.7% ใน [10]</td></tr>
+        <tr><td>สัดส่วนไนโตรเจนที่พืชใช้ได้ในปีแรก</td><td>ปุ๋ยหมัก 15% มูลวัว 25% มูลไก่ 30%</td><td><span class="st st-mix">มีช่วง</span></td><td>ตารางที่ 1 ของ [7] สำหรับพืชที่ปลูกฤดูใบไม้ผลิ ส่วน [8] และ [11] ให้ช่วงกว้างกว่า (20–70% ขึ้นกับชนิดและวิธีใส่)</td></tr>
+        <tr><td>จำนวนต้นและกระถาง</td><td>5 ต้น กระถางกว้าง 30 ซม. ดิน 5 กก.</td><td><span class="st st-src">อ้างอิงได้</span></td><td>[1] และ [3] (กระถาง 30 ซม. มี 1–5 ต้น)</td></tr>
+        <tr><td>ปริมาณไนโตรเจนที่ใส่</td><td>1 กก./ตร.ม. ≈ 1 ก. N ต่อกระถาง</td><td><span class="st st-src">อ้างอิงได้</span></td><td>[1] ใช้ 1 และ 3 ก. N ต่อกระถาง</td></tr>
+        <tr><td>อายุเก็บเกี่ยว</td><td>25–30 วัน</td><td><span class="st st-src">อ้างอิงได้</span></td><td>25 วัน [1], 30 วัน [3], 35 วัน [2], 4–5 สัปดาห์ [4]</td></tr>
+        <tr><td>น้ำหนักสดต่อต้น (ชุดควบคุม)</td><td>ราว 4.4 ก. ที่วันที่ 25</td><td><span class="st st-src">ปรับตามงานวิจัย</span></td><td>4.27 ก. ใน [1] (ใส่ปุ๋ย 1 ก. N: มูลไก่ 14.9 ก. ปุ๋ยอินทรีย์ 10.7 ก. และ 3 ก. N: 23.0 และ 24.7 ก.)</td></tr>
+        <tr><td>อัตราปลดปล่อยไนโตรเจนที่เหลือ ความเค็มของดิน ความจุน้ำ การคายระเหย อุณหภูมิเหมาะสม (30°C) ไนโตรเจนตั้งต้นในดิน ไนโตรเจนในต้น (3.5 มก./ก.)</td><td>ดูตารางสมมติฐานด้านล่าง</td><td><span class="st st-ass">สมมติ</span></td><td>ยังไม่มีแหล่งอ้างอิงโดยตรง ปรับให้ผลลัพธ์ใกล้ [1] เท่านั้น</td></tr>
+        <tr><td>สภาพอากาศ (อุณหภูมิ ฝน ชั่วโมงแดด) ของแต่ละฤดู</td><td>ค่าประมาณแบบไทยทั่วไป</td><td><span class="st st-ass">สมมติ</span></td><td>ยังไม่ได้อ้างอิงค่าปกติของกรมอุตุนิยมวิทยา ควรเทียบกับจังหวัดที่ปลูกจริง</td></tr>
+      </tbody></table></div>
+    <p class="note">งาน [1] ไม่พบว่ามูลไก่ปริมาณ 3 ก. N ต่อกระถางทำให้ผักบุ้งโตช้าลง โมเดลนี้จึงลดผลของความเค็มลงจากเวอร์ชันก่อน ผลของปุ๋ยแต่ละชนิดในแอปจึงขึ้นกับค่าไนโตรเจนข้างบนเป็นหลัก ถ้าปุ๋ยหมักที่ใช้จริงมีไนโตรเจนสูงกว่า 1.0% ผลจะเปลี่ยน ให้แก้ค่าในหัวข้อสมมติฐานด้านล่าง</p>
+
+    <h3>รายการอ้างอิง</h3>
+    <ol class="reflist">
+      <li id="ref1">Anukulprasert O., Boonwattanakul P., Chakatrakan S. (2015). ผลของการใช้ปุ๋ยอินทรีย์คุณภาพสูง ปุ๋ยเคมี และการใช้ร่วมกันที่มีผลต่อการเจริญเติบโตและการให้ผลผลิตของผักบุ้งจีน. <i>Thai Science and Technology Journal</i> 23(6): 970–982. <a href="https://li01.tci-thaijo.org/index.php/tstj/article/view/41335" target="_blank" rel="noopener">เปิดบทความ</a></li>
+      <li id="ref2">Fahri A.K., Adawiah, Afriliyanti R. (2026). Dinamika pertumbuhan kangkung darat (<i>Ipomoea reptans</i> Poir.) terhadap aplikasi biostimulan asam amino dan NPK. <i>Journal of Agriculture and Animal Science</i> 6(1): 137–147. <a href="https://jurnal.umko.ac.id/index.php/agrimals/article/download/2355/793/10313" target="_blank" rel="noopener">เปิดบทความ</a></li>
+      <li id="ref3">Lakitan B., Kartika K. (2020). Population density, multiple harvesting, and ability of <i>Ipomoea reptans</i> to compete with native weeds at tropical wetlands. <i>Biodiversitas</i> 21(9): 4376–4383. <a href="https://www.smujo.id/biodiv/article/download/6631/4236/28536" target="_blank" rel="noopener">เปิดบทความ</a></li>
+      <li id="ref4">Pohan S.D., Amrizal, Puspitasari W.D. (2021). The effect of organic fertilizers on growth and yield of water spinach (<i>Ipomoea reptans</i> Poir). <i>JERAMI Indonesian Journal of Crop Science</i> 3(2). <a href="https://jerami.faperta.unand.ac.id/index.php/Jerami-JIJCS/article/download/94/45" target="_blank" rel="noopener">เปิดบทความ</a></li>
+      <li id="ref5">งานศึกษาผลของมูลวัวต่อผักบุ้งในกากแร่ทอง (cv. Bangkok LP1) <i>Current Research in Agricultural Sciences</i> (2023) ชื่อผู้แต่งไม่ปรากฏในข้อความที่ดึงมา ควรตรวจกับต้นฉบับก่อนอ้างอิงในรายงาน. <a href="https://archive.conscientiabeam.com/index.php/68/article/download/3414/7948" target="_blank" rel="noopener">เปิดบทความ</a></li>
+      <li id="ref6">กรมวิชาการเกษตร (2548). ประกาศกรมวิชาการเกษตร เรื่อง มาตรฐานปุ๋ยอินทรีย์ พ.ศ. 2548. ราชกิจจานุเบกษา เล่ม 122 ตอนพิเศษ 109 ง (30 กันยายน 2548). <a href="https://ratchakitcha.soc.go.th/documents/172707.pdf" target="_blank" rel="noopener">เปิดเอกสาร</a> (ไฟล์สแกน ควรตรวจตัวเลขกับฉบับทางการ)</li>
+      <li id="ref7">Wortmann C., Shaver T., Garcia J.P., Shapiro C., Maharjan B., Krienke B. (2018). Fertilizer N substitution values of land-applied organic materials. <i>CropWatch</i>, University of Nebraska–Lincoln. <a href="https://cropwatch.unl.edu/2018/fertilizer-n-substitution-values-land-applied-organic-materials" target="_blank" rel="noopener">เปิดบทความ</a></li>
+      <li id="ref8">Wilson M. Manure characteristics. University of Minnesota Extension. <a href="https://extension.umn.edu/manure-management/manure-characteristics" target="_blank" rel="noopener">เปิดบทความ</a></li>
+      <li id="ref9">Yantaboot K., Saoviang P., Buanak P., Singcanipa W. การศึกษาอัตราส่วนที่เหมาะสมในการผลิตปุ๋ยอินทรีย์อัดเม็ดจากมูลสัตว์และผลต่อการเจริญเติบโตของผักบุ้งจีน. <i>วารสารวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยราชภัฏบุรีรัมย์</i> 9(2). <a href="https://ph02.tci-thaijo.org/index.php/scibru/article/download/258476/173313/1009980" target="_blank" rel="noopener">เปิดบทความ</a></li>
+      <li id="ref10">Suwannatrai S. และคณะ (2568). ผลของการใช้ปุ๋ยหมักจากกากตะกอนก๊าซชีวภาพผสมวัสดุพืชต่อการเจริญเติบโตของผักบุ้งจีน. <i>วารสารวิทยาศาสตร์และเทคโนโลยี มทร.สุวรรณภูมิ</i> 9(3). <a href="https://ph03.tci-thaijo.org/index.php/JSciTech/article/download/4300/3199/31688" target="_blank" rel="noopener">เปิดบทความ</a></li>
+      <li id="ref11">Zhang H. Fertilizer nutrients in animal manure. Oklahoma State University Extension. <a href="https://extension.okstate.edu/fact-sheets/fertilizer-nutrients-in-animal-manure" target="_blank" rel="noopener">เปิดบทความ</a></li>
+    </ol>
+  </section>
+
+  <details>
+    <summary>สมมติฐานของโมเดล (ปรับค่าได้)</summary>
+    <div class="assume">
+      <p class="note">ค่าด้านล่างเป็นค่าสมมติทั่วไปเพื่อให้โมเดลทำงาน ควรแทนด้วยค่าจากฉลากหรือผลวิเคราะห์ปุ๋ยจริงที่ใช้ในโครงงาน เมื่อแก้ค่า กราฟและผลสรุปจะคำนวณใหม่ทันที</p>
+      <div class="tablewrap"><table id="assumeTable"></table></div>
+      <div class="rowbtns"><button class="btn ghost" id="resetAssume" type="button">คืนค่าเริ่มต้น</button></div>
+      <ul>
+        <li>วันที่ 0 คือวันที่ต้นกล้าเริ่มโต ปลูกกระถางละ 5 ต้น กระถางกว้างราว 30 ซม. ใส่ดิน 5 กก. (เท่ากับ 70 ต้นต่อตารางเมตร) ตามการทดลองของ Anukulprasert และคณะ (2015)</li>
+        <li>ความเร็วโตต่อวันขึ้นกับ อุณหภูมิ (เหมาะสุดราว 30°C) แสงแดด ความชื้นดิน ไนโตรเจนที่ใช้ได้ และความเค็มของดิน</li>
+        <li>ปุ๋ยปล่อยไนโตรเจนที่ใช้ได้ทันทีส่วนหนึ่ง ที่เหลือทยอยปลดปล่อยทุกวัน ฝนหนักและน้ำส่วนเกินชะล้างไนโตรเจนออกจากเขตราก</li>
+        <li>ก่อนวันใส่ปุ๋ย ทุกชุดใช้สมการและค่าเดียวกัน จึงโตเท่ากันทุกประการ</li>
+      </ul>
+      <div class="rowbtns"><button class="btn ghost" id="copyBtn" type="button">คัดลอกตารางรายวัน (วางใน Excel ได้)</button><span class="sub" id="copyMsg" aria-live="polite"></span></div>
+      <textarea id="copyBox" readonly hidden aria-label="ตารางรายวันสำหรับคัดลอก"></textarea>
+    </div>
+  </details>
+
+  <p class="note">นี่คือผลจำลองจากสมมติฐาน ไม่ใช่ผลการทดลองจริง ใช้ตั้งสมมติฐานและวางแผนการเก็บข้อมูล แล้วนำค่าที่วัดจริงจากแปลงปลูกมาเทียบกับกราฟนี้</p>
+</div>
+
+<script>
+/* ===== MODEL: ผักบุ้งจีน 30 วัน (daily time step) ===== */
+var DAYS = 30;
+var WMAX = 30;      // น้ำหนักสดสูงสุดต่อต้น (g)
+var W0 = 0.3;       // น้ำหนักสดตอนต้นกล้าเพิ่งงอก (g)
+var HMAX = 50;      // ความสูงสูงสุด (cm)
+var N0 = 18;        // ไนโตรเจนที่พืชใช้ได้ในดินตั้งต้น (mg/kg)
+var DENSITY = 70;   // ต้นต่อตารางเมตร (5 ต้น/กระถางกว้าง 30 ซม. = 71 ต้น/ตร.ม.)
+var SOILKG = 70;    // ดินต่อพื้นที่ (กก./ตร.ม.) = ดิน 5 กก. ต่อกระถางกว้าง 30 ซม.
+var CAPMM = 40;     // ความจุน้ำของดินเขตราก (มม.)
+var N_PER_G = 3.5;  // ไนโตรเจนในน้ำหนักสด (mg/g)
+var KN = 25;        // ค่าคงที่กึ่งอิ่มตัวของไนโตรเจน (mg/kg)
+var RMAX = 0.36;    // อัตราโตสูงสุดต่อวัน
+
+var SEASONS = {
+  hot:   { name: 'ฤดูร้อน',  tmax: 35.5, tmaxSd: 1.2, tmin: 26.5, tminSd: 1.0, sun: 8.3, sunSd: 1.1, pRain: 0.10, rainMean: 9 },
+  rainy: { name: 'ฤดูฝน',    tmax: 32.5, tmaxSd: 1.5, tmin: 25.5, tminSd: 0.8, sun: 5.0, sunSd: 1.8, pRain: 0.58, rainMean: 14 },
+  cool:  { name: 'ฤดูหนาว',  tmax: 32.0, tmaxSd: 1.4, tmin: 22.0, tminSd: 2.0, sun: 8.0, sunSd: 1.0, pRain: 0.04, rainMean: 6 }
+};
+
+var FERT_PRESETS = {
+  compost: { npct: 1.0, avail: 0.15, rate: 0.030, salt: 0.20, whc: 1.15 },
+  cow:     { npct: 1.5, avail: 0.25, rate: 0.050, salt: 0.35, whc: 1.03 },
+  chicken: { npct: 1.7, avail: 0.30, rate: 0.060, salt: 0.50, whc: 1.03 }
+};
+
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    var t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function gauss(r) {
+  var u = 0, v = r();
+  while (u === 0) u = r();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+function clamp(x, a, b) { return Math.min(b, Math.max(a, x)); }
+
+function makeWeather(season, seed) {
+  var S = SEASONS[season], r = mulberry32(seed), out = [];
+  var aMax = 0, aMin = 0, wet = false;
+  var pww = S.pRain + 0.25 * (1 - S.pRain), pdw = S.pRain * 0.75;
+  for (var d = 0; d < DAYS; d++) {
+    aMax = 0.6 * aMax + gauss(r) * S.tmaxSd * 0.8;
+    aMin = 0.6 * aMin + gauss(r) * S.tminSd * 0.8;
+    wet = r() < (wet ? pww : pdw);
+    var rain = 0;
+    if (wet) rain = clamp(-S.rainMean * Math.log(1 - r()), 1, 60);
+    var sun = S.sun + gauss(r) * S.sunSd;
+    var tmax = S.tmax + aMax;
+    if (wet) { sun *= 0.45; tmax -= 1.8; }
+    sun = clamp(sun, 0.5, 11.5);
+    var tmin = Math.min(S.tmin + aMin, tmax - 3);
+    out.push({ tmax: tmax, tmin: tmin, sun: sun, rain: rain });
+  }
+  return out;
+}
+
+var H_REF = 12.35, W_REF = 4.27, H_EXP = 0.4; // ความสัมพันธ์ความสูง-น้ำหนัก ปรับตามชุดควบคุมของ Anukulprasert et al. 2015
+function hFromW(W) { return H_REF * Math.pow(W / W_REF, H_EXP); }
+function lFromW(W) { return 2 + 14 * Math.sqrt(W / WMAX); }
+function etRef(w) { return clamp(2.2 + 0.28 * (w.tmax - 28) + 0.35 * (w.sun - 6), 1.2, 7); }
+
+function simGroup(fert, wx, P) {
+  var W = W0, N = N0, Norg = 0, cap, Mmm = 0.7 * CAPMM, ec = 0.4, whc = 1, applied = false;
+  var o = { W: [W], H: [hFromW(W)], L: [lFromW(W)], N: [N], M: [70], EC: [ec], fN: [N / (N + KN)], fS: [1], fW: [1] };
+  for (var d = 1; d <= DAYS; d++) {
+    var w = wx[d - 1];
+    if (fert && d === P.fertDay + 1) {
+      var ntot = P.dose * fert.npct * 100;
+      N += ntot * fert.avail;
+      Norg += ntot * (1 - fert.avail);
+      whc = fert.whc; applied = true;
+    }
+    cap = CAPMM * whc;
+    Mmm += P.water + w.rain;
+    var drain = Math.max(0, Mmm - cap);
+    Mmm -= drain;
+    var Mpre = Mmm / cap;
+    var kc = 0.4 + 0.6 * Math.min(1, W / 8);
+    var et = Math.min(Mmm, etRef(w) * kc * Math.min(1, Mpre / 0.5));
+    Mmm -= et;
+    var Mmid = (Mpre + Mmm / cap) / 2;
+
+    var rel = applied ? Norg * fert.rate : 0;
+    Norg -= rel;
+    N += rel + 0.35;
+    ec = 0.4 + (applied ? fert.salt : 0.3) * (N + 0.25 * Norg) / 100;
+
+    var Tday = 0.65 * w.tmax + 0.35 * w.tmin;
+    var fT = Math.exp(-Math.pow((Tday - 30) / 10, 2)) * (w.tmax > 37 ? 0.85 : 1);
+    var fL = 0.35 + 0.65 * Math.min(1, w.sun / 7);
+    var fW = clamp(Mmid / 0.4, 0.05, 1);
+    var fN = N / (N + KN);
+    var fS = Math.max(0.3, 1 - 0.4 * Math.max(0, ec - 1.8));
+    var r = RMAX * fT * fL * fW * fN * fS;
+    var dW = r * W * (1 - W / WMAX);
+    var k = N_PER_G * DENSITY / SOILKG;
+    dW = Math.min(dW, 0.9 * N / k);
+    W += dW; N -= dW * k;
+    N *= 1 - Math.min(0.4, 0.008 + 0.01 * drain);
+
+    o.W.push(W); o.H.push(hFromW(W)); o.L.push(lFromW(W)); o.N.push(N);
+    o.M.push(Mmm / cap * 100); o.EC.push(ec); o.fN.push(fN); o.fS.push(fS); o.fW.push(fW);
+  }
+  return o;
+}
+
+function simulate(P) {
+  var wx = makeWeather(P.season, P.seed);
+  return {
+    weather: wx,
+    control: simGroup(null, wx, P),
+    compost: simGroup(P.fert.compost, wx, P),
+    manure: simGroup(P.fert.manure, wx, P)
+  };
+}
+
+
+</script>
+<script>
+(function () {
+  'use strict';
+  var $ = function (s) { return document.querySelector(s); };
+  var GROUPS = [
+    { k: 'control', name: 'ไม่ใส่ปุ๋ย', tag: 'ชุดควบคุม' },
+    { k: 'compost', name: 'ปุ๋ยหมัก', tag: 'ชุดทดลอง' },
+    { k: 'manure', name: 'ปุ๋ยคอก', tag: 'ชุดทดลอง' }
+  ];
+  var ROWS = [
+    { key: 'npct', label: 'ไนโตรเจนรวมในปุ๋ย (%)', mul: 1, step: 0.1, dec: 1 },
+    { key: 'avail', label: 'ส่วนที่พืชใช้ได้ทันที (%)', mul: 100, step: 1, dec: 0 },
+    { key: 'rate', label: 'อัตราปลดปล่อยไนโตรเจนที่เหลือ (%/วัน)', mul: 100, step: 0.5, dec: 1 },
+    { key: 'salt', label: 'ดัชนีความเค็ม (dS/m ต่อ 100 มก./กก.)', mul: 1, step: 0.05, dec: 2 },
+    { key: 'whc', label: 'ความจุน้ำของดินเทียบเดิม (เท่า)', mul: 1, step: 0.01, dec: 2 }
+  ];
+  var month = new Date().getMonth();
+  var st = {
+    season: (month >= 2 && month <= 4) ? 'hot' : (month >= 5 && month <= 9) ? 'rainy' : 'cool',
+    seed: 2026, water: 4, fertDay: 8, dose: 1, manureType: 'cow', showControl: true,
+    t: 30, playing: false, speed: 1,
+    fert: { compost: Object.assign({}, FERT_PRESETS.compost), manure: Object.assign({}, FERT_PRESETS.cow) }
+  };
+  var S = null, raf = 0, lastTs = 0, acc = 0;
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var DAY_SEC = 0.8;
+  var PLANTS = 5; // ต้นต่อกระถาง (พื้นที่กระถาง = PLANTS / DENSITY ตร.ม.)
+
+  function clampv(x, a, b) { return Math.min(b, Math.max(a, x)); }
+  function at(arr, t) { var i = Math.min(DAYS - 1, Math.floor(t)), f = t - i; return arr[i] * (1 - f) + arr[i + 1] * f; }
+  function nf(x, d) { return Number(x).toFixed(d); }
+  function visible() { return GROUPS.filter(function (g) { return g.k !== 'control' || st.showControl; }); }
+  function gname(g) { return g.k === 'manure' ? (st.manureType === 'cow' ? 'ปุ๋ยคอก (มูลวัว)' : 'ปุ๋ยคอก (มูลไก่)') : g.name; }
+
+  function compute() {
+    S = simulate({ season: st.season, seed: st.seed, water: st.water, fertDay: st.fertDay, dose: st.dose, fert: st.fert });
+  }
+
+  /* ---------- กระถาง ---------- */
+  function leafRGB(c, stress) {
+    var a = [196, 201, 78], b = [38, 140, 70], br = [150, 112, 52];
+    var r = [0, 1, 2].map(function (i) { return a[i] + (b[i] - a[i]) * c; });
+    r = r.map(function (v, i) { return Math.round(v + (br[i] - v) * stress * 0.7); });
+    return 'rgb(' + r.join(',') + ')';
+  }
+  function potSVG(g, t) {
+    var d = S[g.k], Wt = at(d.W, t), Ht = at(d.H, t), Lt = at(d.L, t);
+    var c = clampv((at(d.fN, t) - 0.15) / 0.7, 0, 1);
+    var stress = clampv((1 - at(d.fS, t)) / 0.5, 0, 1);
+    var col = leafRGB(c, stress), base = 200, px = Ht * 4.6, o = [];
+    var applied = g.k !== 'control' && t >= st.fertDay;
+    o.push('<ellipse cx="100" cy="266" rx="62" ry="5" fill="var(--line)"/>');
+    for (var m = 10; m <= 40; m += 10) {
+      var y = base - m * 4.6;
+      o.push('<line x1="28" x2="35" y1="' + y + '" y2="' + y + '" class="gl"/><text x="25" y="' + (y + 3.5) + '" class="tx e" style="font-size:9px">' + m + '</text>');
+    }
+    o.push('<text x="25" y="' + (base + 12) + '" class="tx e" style="font-size:9px">ซม.</text>');
+    var bases = [60, 80, 100, 120, 140], lean = [-0.42, -0.2, 0, 0.2, 0.42], sc = [0.9, 1, 0.96, 1, 0.9];
+    var nL = Math.min(12, Math.max(1, Math.round(Lt * 0.75)));
+    var ls = 0.25 + 0.95 * Math.sqrt(Wt / WMAX);
+    for (var i = 0; i < 5; i++) {
+      var bx = bases[i], L = px * sc[i];
+      var tx = bx + lean[i] * L * 0.55, ty = base - L * 0.95, cx = bx + lean[i] * L * 0.1, cy = base - L * 0.55;
+      o.push('<path d="M' + bx + ' ' + base + ' Q' + nf(cx, 1) + ' ' + nf(cy, 1) + ' ' + nf(tx, 1) + ' ' + nf(ty, 1) + '" fill="none" stroke="var(--stem)" stroke-width="2.2" stroke-linecap="round"/>');
+      for (var j = 0; j < nL; j++) {
+        var u = 0.18 + 0.82 * (j + 1) / nL, v = 1 - u;
+        var px_ = v * v * bx + 2 * v * u * cx + u * u * tx, py_ = v * v * base + 2 * v * u * cy + u * u * ty;
+        var dx = 2 * v * (cx - bx) + 2 * u * (tx - cx), dy = 2 * v * (cy - base) + 2 * u * (ty - cy);
+        var ang = Math.atan2(dy, dx) * 180 / Math.PI + ((j % 2) ? 52 : -52);
+        var s = ls * (0.6 + 0.4 * u);
+        o.push('<path transform="translate(' + nf(px_, 1) + ' ' + nf(py_, 1) + ') rotate(' + nf(ang, 0) + ') scale(' + nf(s, 2) + ')" d="M0 0C3-6 15-8 25 0C15 8 3 6 0 0Z" fill="' + col + '"/>');
+      }
+    }
+    o.push('<rect x="38" y="' + (applied ? 197 : 199) + '" width="124" height="' + (applied ? 11 : 9) + '" rx="2" fill="var(--soil)"/>');
+    if (applied) {
+      var dc = g.k === 'compost' ? '#3E2C1E' : '#8A6A3C';
+      for (var q = 0; q < 14; q++) o.push('<circle cx="' + (44 + q * 8.4) + '" cy="' + (199.5 + (q % 3) * 2.6) + '" r="1.8" fill="' + dc + '" opacity=".9"/>');
+    }
+    o.push('<path d="M44 214 L156 214 L146 262 L54 262 Z" fill="var(--pot)"/>');
+    o.push('<rect x="34" y="207" width="132" height="12" rx="3" fill="var(--pot-rim)"/>');
+    return '<svg viewBox="0 0 200 276" role="img" aria-label="กระถาง' + gname(g) + ' ส่วนสูงเฉลี่ย ' + nf(Ht, 1) + ' ซม.">' + o.join('') + '</svg>';
+  }
+  function renderPots(t) {
+    var host = $('#pots'), vis = visible();
+    host.style.gridTemplateColumns = 'repeat(' + vis.length + ', minmax(0, 1fr))';
+    host.innerHTML = vis.map(function (g) {
+      var d = S[g.k];
+      return '<figure class="pot"><h3 class="k-' + g.k + '">' + gname(g) + ' <span class="tag">' + g.tag + '</span></h3>' + potSVG(g, t) +
+        '<dl class="stats"><dt>จำนวนต้น</dt><dd>' + PLANTS + ' ต้น</dd><dt>ส่วนสูงเฉลี่ย</dt><dd>' + nf(at(d.H, t), 1) + ' ซม.</dd><dt>น้ำหนักสดเฉลี่ย</dt><dd>' + nf(at(d.W, t), 1) + ' ก./ต้น</dd><dt>รวมทั้งกระถาง</dt><dd>' + nf(at(d.W, t) * PLANTS, 0) + ' ก.</dd><dt>ใบ</dt><dd>' + Math.round(at(d.L, t)) + ' ใบ</dd></dl></figure>';
+    }).join('');
+  }
+
+  /* ---------- กราฟเส้น ---------- */
+  function niceMax(v) {
+    var p = Math.pow(10, Math.floor(Math.log10(v))), n = v / p, m = n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 4 ? 4 : n <= 5 ? 5 : n <= 8 ? 8 : 10;
+    return m * p;
+  }
+  function chart(id, key, fixedMax, dec, t) {
+    var VW = 360, VH = 200, ml = 36, mr = 46, mt = 14, mb = 26, pw = VW - ml - mr, ph = VH - mt - mb;
+    var vis = visible(), mx = 0;
+    vis.forEach(function (g) { S[g.k][key].forEach(function (v) { if (v > mx) mx = v; }); });
+    var ymax = fixedMax || niceMax(mx * 1.04 || 1);
+    var X = function (x) { return ml + pw * x / DAYS; }, Y = function (y) { return mt + ph * (1 - y / ymax); };
+    var o = [], F = st.fertDay;
+    o.push('<rect class="shade" x="' + X(0) + '" y="' + mt + '" width="' + (X(F) - X(0)) + '" height="' + ph + '"/>');
+    for (var i = 0; i <= 4; i++) {
+      var yv = ymax * i / 4;
+      o.push('<line class="gl" x1="' + ml + '" x2="' + (ml + pw) + '" y1="' + Y(yv) + '" y2="' + Y(yv) + '"/><text class="tx e" x="' + (ml - 5) + '" y="' + (Y(yv) + 3.5) + '">' + (yv % 1 ? nf(yv, 1) : yv) + '</text>');
+    }
+    for (var d = 0; d <= DAYS; d += 5) o.push('<text class="tx c" x="' + X(d) + '" y="' + (VH - 9) + '">' + d + '</text>');
+    o.push('<text class="tx" x="' + (ml + pw + 6) + '" y="' + (VH - 9) + '">วัน</text>');
+    o.push('<line class="fline" x1="' + X(F) + '" x2="' + X(F) + '" y1="' + mt + '" y2="' + (mt + ph) + '"/><text class="ftx" x="' + (X(F) + 4) + '" y="' + (mt + 10) + '">ใส่ปุ๋ย</text>');
+    var order = ['control', 'compost', 'manure'], ends = [];
+    order.forEach(function (k) {
+      if (k === 'control' && !st.showControl) return;
+      var vals = S[k][key], n = Math.floor(t), pts = [];
+      for (var j = 0; j <= n; j++) pts.push(X(j) + ',' + Y(vals[j]));
+      var tv = at(vals, t);
+      if (t > n) pts.push(X(t) + ',' + Y(tv));
+      var w = k === 'compost' ? 4.2 : 2.2;
+      o.push('<polyline class="ln l-' + k + '" stroke-width="' + w + '" points="' + pts.join(' ') + '"/>');
+      ends.push({ k: k, y: Y(tv), v: tv });
+    });
+    var xe = X(t);
+    ends.forEach(function (e) { o.push('<circle class="f-' + e.k + '" cx="' + xe + '" cy="' + e.y + '" r="3.4"/>'); });
+    var lab = ends.slice().sort(function (a, b) { return a.y - b.y; });
+    for (var z = 1; z < lab.length; z++) if (lab[z].y < lab[z - 1].y + 12) lab[z].y = lab[z - 1].y + 12;
+    lab.forEach(function (e) {
+      var lx = Math.min(xe + 7, VW - 30);
+      o.push('<text class="f-' + e.k + '" x="' + lx + '" y="' + (e.y + 3.5) + '" style="font-size:11px;font-weight:600;font-variant-numeric:tabular-nums">' + nf(e.v, dec) + '</text>');
+    });
+    $(id).innerHTML = o.join('');
+  }
+
+  /* ---------- กราฟสภาพอากาศ ---------- */
+  function renderWeather(t) {
+    var wx = S.weather, VW = 360, ml = 34, mr = 8, pw = VW - ml - mr, o = [], F = st.fertDay;
+    var X = function (x) { return ml + pw * x / DAYS; };
+    var tlo = Math.floor(Math.min.apply(null, wx.map(function (w) { return w.tmin; })) - 1);
+    var thi = Math.ceil(Math.max.apply(null, wx.map(function (w) { return w.tmax; })) + 1);
+    var r1 = { top: 12, h: 70 }, r2 = { top: 100, h: 40 }, r3 = { top: 158, h: 40 };
+    var Yt = function (v) { return r1.top + r1.h * (1 - (v - tlo) / (thi - tlo)); };
+    [r1, r2, r3].forEach(function (r) { o.push('<rect class="shade" x="' + X(0) + '" y="' + r.top + '" width="' + (X(F) - X(0)) + '" height="' + r.h + '"/><line class="gl" x1="' + ml + '" x2="' + (ml + pw) + '" y1="' + (r.top + r.h) + '" y2="' + (r.top + r.h) + '"/>'); });
+    o.push('<text class="tx e" x="' + (ml - 5) + '" y="' + (r1.top + 8) + '">' + thi + '°</text><text class="tx e" x="' + (ml - 5) + '" y="' + (r1.top + r1.h) + '">' + tlo + '°</text>');
+    o.push('<text class="tx e" x="' + (ml - 5) + '" y="' + (r2.top + 8) + '">12 ชม.</text><text class="tx e" x="' + (ml - 5) + '" y="' + (r2.top + r2.h) + '">0</text>');
+    o.push('<text class="tx e" x="' + (ml - 5) + '" y="' + (r3.top + 8) + '">40 มม.</text><text class="tx e" x="' + (ml - 5) + '" y="' + (r3.top + r3.h) + '">0</text>');
+    var up = '', lo = [], hiLine = [], loLine = [];
+    wx.forEach(function (w, i) {
+      var cx = X(i + 0.5), past = (i + 0.5) <= t, op = past ? 1 : 0.3;
+      var bw = pw / DAYS * 0.66, sh = clampv(w.sun / 12, 0, 1) * r2.h, rh = clampv(w.rain / 40, 0, 1) * r3.h;
+      o.push('<rect x="' + nf(cx - bw / 2, 2) + '" y="' + nf(r2.top + r2.h - sh, 2) + '" width="' + nf(bw, 2) + '" height="' + nf(sh, 2) + '" fill="var(--sun)" opacity="' + op + '"/>');
+      if (rh > 0) o.push('<rect x="' + nf(cx - bw / 2, 2) + '" y="' + nf(r3.top + r3.h - rh, 2) + '" width="' + nf(bw, 2) + '" height="' + nf(rh, 2) + '" fill="var(--rain)" opacity="' + op + '"/>');
+      hiLine.push(nf(cx, 1) + ',' + nf(Yt(w.tmax), 1)); loLine.push(nf(cx, 1) + ',' + nf(Yt(w.tmin), 1));
+    });
+    o.push('<polygon points="' + hiLine.join(' ') + ' ' + loLine.slice().reverse().join(' ') + '" fill="var(--hot)" opacity=".14"/>');
+    o.push('<polyline class="ln" stroke="var(--hot)" stroke-width="1.8" points="' + hiLine.join(' ') + '"/><polyline class="ln" stroke="var(--cold)" stroke-width="1.8" points="' + loLine.join(' ') + '"/>');
+    o.push('<line class="fline" x1="' + X(F) + '" x2="' + X(F) + '" y1="8" y2="' + (r3.top + r3.h) + '"/><text class="ftx" x="' + (X(F) + 4) + '" y="20">ใส่ปุ๋ย</text>');
+    o.push('<line x1="' + X(t) + '" x2="' + X(t) + '" y1="8" y2="' + (r3.top + r3.h) + '" stroke="var(--fg)" stroke-width="1.2"/>');
+    for (var d = 0; d <= DAYS; d += 5) o.push('<text class="tx c" x="' + X(d) + '" y="216">' + d + '</text>');
+    o.push('<text class="tx" x="6" y="' + (r1.top + r1.h / 2 + 3) + '" fill="var(--hot)" style="fill:var(--hot)">สูง</text>');
+    $('#wxChart').innerHTML = o.join('');
+  }
+  function weatherSummary() {
+    var wx = S.weather, n = wx.length, avgT = 0, avgS = 0, rain = 0, rd = 0;
+    wx.forEach(function (w) { avgT += (w.tmax + w.tmin) / 2; avgS += w.sun; rain += w.rain; if (w.rain > 0) rd++; });
+    $('#wxSummary').textContent = SEASONS[st.season].name + ' · อุณหภูมิเฉลี่ย ' + nf(avgT / n, 1) + '°C · แดด ' + nf(avgS / n, 1) + ' ชม./วัน · ฝนรวม ' + nf(rain, 0) + ' มม. (' + rd + ' วัน) · ทุกชุดได้อากาศเหมือนกัน';
+  }
+
+  /* ---------- ตารางสรุป + ข้อความ ---------- */
+  function renderWeekly() {
+    var vis = visible(), h = '<thead><tr><th>ชุดการทดลอง</th><th>วันที่ 0</th><th>+ สัปดาห์ 1</th><th>+ สัปดาห์ 2</th><th>+ สัปดาห์ 3</th><th>+ สัปดาห์ 4</th><th>วันที่ 28</th><th>วันที่ 30</th></tr></thead><tbody>';
+    vis.forEach(function (g) {
+      var H = S[g.k].H;
+      h += '<tr><td class="k-' + g.k + '"><b>' + gname(g) + '</b></td><td>' + nf(H[0], 1) + '</td>';
+      for (var w = 1; w <= 4; w++) h += '<td>+' + nf(H[7 * w] - H[7 * (w - 1)], 1) + '</td>';
+      h += '<td>' + nf(H[28], 1) + '</td><td>' + nf(H[30], 1) + '</td></tr>';
+    });
+    $('#weekTable').innerHTML = h + '</tbody>';
+    $('#weekNote').textContent = 'ใส่ปุ๋ยหลังวันที่ ' + st.fertDay + ' ก่อนหน้านั้นทุกชุดเพิ่มเท่ากัน ตัวเลขที่มีเครื่องหมาย + คือส่วนสูงที่เพิ่มขึ้นในสัปดาห์นั้น (ซม.)';
+  }
+  function renderSummary(t) {
+    var day = Math.round(t), vis = visible(), ctl = at(S.control.W, t);
+    $('#sumTitle').textContent = 'สรุปผล ณ วันที่ ' + day;
+    var h = '<thead><tr><th>ชุดการทดลอง</th><th>ส่วนสูงเฉลี่ย (ซม.)</th><th>น้ำหนักสดเฉลี่ย (ก./ต้น)</th><th>รวมทั้งกระถาง (ก.)</th><th>ใบ (ใบ)</th><th>N ในดิน (มก./กก.)</th>' + (st.showControl ? '<th>เทียบชุดควบคุม</th>' : '') + '</tr></thead><tbody>';
+    vis.forEach(function (g) {
+      var d = S[g.k], w = at(d.W, t), pct = (w / ctl - 1) * 100;
+      h += '<tr><td class="k-' + g.k + '"><b>' + gname(g) + '</b></td><td>' + nf(at(d.H, t), 1) + '</td><td>' + nf(w, 1) + '</td><td>' + nf(w * PLANTS, 0) + '</td><td>' + Math.round(at(d.L, t)) + '</td><td>' + nf(at(d.N, t), 1) + '</td>' +
+        (st.showControl ? '<td>' + (g.k === 'control' ? '—' : (pct >= 0 ? '+' : '') + nf(pct, 0) + '%') + '</td>' : '') + '</tr>';
+    });
+    $('#sumTable').innerHTML = h + '</tbody>';
+
+    var v;
+    if (t <= st.fertDay) {
+      v = 'ช่วงก่อนใส่ปุ๋ย ทุกชุดโตเท่ากัน ส่วนสูงเฉลี่ย <b>' + nf(at(S.compost.H, t), 1) + ' ซม.</b> น้ำหนักสด <b>' + nf(at(S.compost.W, t), 1) + ' ก./ต้น</b> เพราะได้น้ำ แสงแดด และอากาศเดียวกัน';
+    } else {
+      var wc = at(S.compost.W, t), wm = at(S.manure.W, t), diff = (wm - wc) / wc * 100, mn = gname(GROUPS[2]);
+      if (Math.abs(diff) < 3) v = 'ในโมเดลนี้ ณ วันที่ ' + day + ' ปุ๋ยหมักกับ' + mn + 'ให้น้ำหนักสดใกล้เคียงกัน (ต่างกันไม่ถึง 3%)';
+      else v = 'ในโมเดลนี้ ณ วันที่ ' + day + ' ชุด<b>' + (diff > 0 ? mn : 'ปุ๋ยหมัก') + '</b> มีน้ำหนักสดมากกว่าอีกชุดประมาณ <b>' + nf(Math.abs(diff > 0 ? diff : (wc - wm) / wm * 100), 0) + '%</b>';
+      var notes = [];
+      [['compost', 'ปุ๋ยหมัก'], ['manure', mn]].forEach(function (p) {
+        var fs = S[p[0]].fS, lowest = 1, i, lim = Math.floor(t);
+        for (i = 0; i <= lim; i++) if (fs[i] < lowest) lowest = fs[i];
+        if (lowest < 0.9) notes.push(p[1] + 'ทำให้ดินเค็มจนต้นโตช้าลง (ความเค็ม EC สูงสุด ' + nf(Math.max.apply(null, S[p[0]].EC.slice(0, lim + 1)), 1) + ' dS/m)');
+      });
+      var lowN = [];
+      [['compost', 'ปุ๋ยหมัก'], ['manure', mn]].forEach(function (p) { if (at(S[p[0]].N, t) < 5 && t > st.fertDay + 5) lowN.push(p[1]); });
+      if (notes.length) v += ' ' + notes.join(' และ') + '.';
+      if (lowN.length) v += ' ไนโตรเจนในดินของชุด' + lowN.join(' และ') + 'เหลือน้อย การเติบโตช่วงท้ายจึงชะลอ.';
+    }
+    $('#verdict').innerHTML = v;
+  }
+
+  /* ---------- ตัวควบคุม ---------- */
+  function renderControlled() {
+    $('#controlled').innerHTML = '<strong>ตัวแปรที่ควบคุมให้เท่ากันทุกชุด</strong><ul><li>จำนวนต้น ' + PLANTS + ' ต้นต่อกระถาง เท่ากันทุกชุด (ความหนาแน่น ' + DENSITY + ' ต้น/ตร.ม. กระถางกว้างราว ' + nf(Math.sqrt(4 * PLANTS / DENSITY / Math.PI) * 100, 0) + ' ซม.)</li><li>น้ำ ' + nf(st.water, 1) + ' มม./วัน รดเวลา 07:00 น.</li><li>แสงแดด ชั่วโมงแดดแต่ละวันเท่ากัน (เฉลี่ย ' + nf(S.weather.reduce(function (a, w) { return a + w.sun; }, 0) / DAYS, 1) + ' ชม./วัน)</li><li>ปุ๋ย ' + nf(st.dose, 1) + ' กก./ตร.ม. เท่ากัน ใส่หลังวันที่ ' + st.fertDay + ' (ประมาณ ' + nf(st.dose * 1000 * PLANTS / DENSITY, 0) + ' กรัมต่อกระถาง ให้ไนโตรเจนรวมปุ๋ยหมัก ' + nf(st.dose * 1000 * PLANTS / DENSITY * st.fert.compost.npct / 100, 1) + ' ก. ปุ๋ยคอก ' + nf(st.dose * 1000 * PLANTS / DENSITY * st.fert.manure.npct / 100, 1) + ' ก.)</li></ul>';
+    $('#legend').innerHTML = visible().map(function (g) {
+      return '<span><i class="swatch k-' + g.k + '" style="border-top-style:' + (g.k === 'control' ? 'dashed' : 'solid') + '"></i>' + gname(g) + '</span>';
+    }).join('') + '<span><i class="swatch" style="border-top:2px dashed var(--mark)"></i>วันใส่ปุ๋ย</span>';
+    var pct = st.fertDay / DAYS * 100;
+    $('#fmark').style.left = 'calc(' + pct + '% + ' + ((0.5 - pct / 100) * 16) + 'px)';
+  }
+  function renderAssume() {
+    var rows = '<thead><tr><th>ค่า</th><th class="k-compost">ปุ๋ยหมัก</th><th class="k-manure">' + gname(GROUPS[2]) + '</th></tr></thead><tbody>';
+    ROWS.forEach(function (r) {
+      rows += '<tr><td>' + r.label + '</td>' + ['compost', 'manure'].map(function (k) {
+        return '<td><input type="number" inputmode="decimal" id="as-' + k + '-' + r.key + '" data-k="' + k + '" data-key="' + r.key + '" step="' + r.step + '" min="0" value="' + nf(st.fert[k][r.key] * r.mul, r.dec) + '" aria-label="' + r.label + ' ' + (k === 'compost' ? 'ปุ๋ยหมัก' : 'ปุ๋ยคอก') + '"></td>';
+      }).join('') + '</tr>';
+    });
+    $('#assumeTable').innerHTML = rows + '</tbody>';
+  }
+  function renderValues() {
+    $('#waterOut').textContent = nf(st.water, 1) + ' มม./วัน';
+    $('#fertDayOut').textContent = st.fertDay;
+    $('#doseOut').textContent = nf(st.dose, 1) + ' กก./ตร.ม.';
+    var t = st.t, day = Math.round(t);
+    $('#dayNum').textContent = day;
+    $('#scrub').value = t;
+    $('#phase').textContent = t <= st.fertDay
+      ? 'ก่อนใส่ปุ๋ย (วันที่ 0–' + st.fertDay + '): ทุกชุดได้น้ำ แสง และอากาศเดียวกัน จึงเติบโตเท่ากัน'
+      : 'หลังใส่ปุ๋ย (ตั้งแต่วันที่ ' + st.fertDay + '): ปุ๋ยหมักและปุ๋ยคอกต่างกันที่การปลดปล่อยไนโตรเจน ความเค็ม และความจุน้ำของดิน';
+    var b = $('#btnPlay');
+    b.textContent = st.playing ? 'หยุดชั่วคราว' : (t >= DAYS ? 'เล่นจำลองตั้งแต่วันที่ 0' : (t > 0 ? 'เล่นต่อ' : 'เล่นจำลอง'));
+  }
+  function frame() {
+    var t = st.t;
+    renderValues(); renderPots(t); renderWeather(t);
+    chart('#chH', 'H', 0, 1, t); chart('#chW', 'W', 0, 1, t); chart('#chN', 'N', 0, 0, t); chart('#chM', 'M', 100, 0, t);
+    renderSummary(t); renderWeekly();
+  }
+  function fullRender() { compute(); weatherSummary(); renderControlled(); renderAssume(); frame(); }
+
+  /* ---------- เล่น ---------- */
+  function stop() { st.playing = false; cancelAnimationFrame(raf); frame(); }
+  function loop(ts) {
+    if (!st.playing) return;
+    var dt = Math.min(0.1, (ts - lastTs) / 1000); lastTs = ts;
+    if (reduce) {
+      acc += dt;
+      if (acc >= DAY_SEC / st.speed) { acc = 0; st.t = Math.min(DAYS, Math.floor(st.t + 1e-6) + 1); }
+    } else st.t = Math.min(DAYS, st.t + dt * st.speed / DAY_SEC);
+    if (st.t >= DAYS) { st.t = DAYS; stop(); return; }
+    frame();
+    raf = requestAnimationFrame(loop);
+  }
+  function play() {
+    if (st.t >= DAYS) st.t = 0;
+    st.playing = true; lastTs = performance.now(); acc = 0;
+    raf = requestAnimationFrame(loop); frame();
+  }
+  $('#btnPlay').addEventListener('click', function () { st.playing ? stop() : play(); });
+  $('#btnPrev').addEventListener('click', function () { st.playing = false; st.t = Math.max(0, Math.ceil(st.t - 1e-6) - 1); frame(); });
+  $('#btnNext').addEventListener('click', function () { st.playing = false; st.t = Math.min(DAYS, Math.floor(st.t + 1e-6) + 1); frame(); });
+  $('#scrub').addEventListener('input', function (e) { st.playing = false; st.t = parseFloat(e.target.value); frame(); });
+  document.querySelectorAll('.seg button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      st.speed = +b.dataset.speed;
+      document.querySelectorAll('.seg button').forEach(function (x) { x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
+    });
+  });
+
+  /* ---------- ตั้งค่า ---------- */
+  $('#season').value = st.season; $('#water').value = st.water; $('#fertDay').value = st.fertDay; $('#dose').value = st.dose; $('#manureType').value = st.manureType;
+  $('#season').addEventListener('change', function (e) { st.season = e.target.value; fullRender(); });
+  $('#water').addEventListener('input', function (e) { st.water = parseFloat(e.target.value); fullRender(); });
+  $('#fertDay').addEventListener('input', function (e) { st.fertDay = parseInt(e.target.value, 10); fullRender(); });
+  $('#dose').addEventListener('input', function (e) { st.dose = parseFloat(e.target.value); fullRender(); });
+  $('#manureType').addEventListener('change', function (e) {
+    st.manureType = e.target.value; st.fert.manure = Object.assign({}, FERT_PRESETS[st.manureType]); fullRender();
+  });
+  $('#showControl').addEventListener('change', function (e) { st.showControl = e.target.checked; fullRender(); });
+  $('#reroll').addEventListener('click', function () { st.seed = Math.floor(Math.random() * 1e6) + 1; fullRender(); });
+  $('#assumeTable').addEventListener('input', function (e) {
+    var el = e.target, k = el.dataset.k, key = el.dataset.key, v = parseFloat(el.value);
+    if (!k || isNaN(v) || v < 0) return;
+    var row = ROWS.filter(function (r) { return r.key === key; })[0];
+    st.fert[k][key] = v / row.mul;
+    compute(); renderControlled(); frame();
+  });
+  $('#resetAssume').addEventListener('click', function () {
+    st.fert = { compost: Object.assign({}, FERT_PRESETS.compost), manure: Object.assign({}, FERT_PRESETS[st.manureType]) };
+    fullRender();
+  });
+
+  /* ---------- คัดลอกตาราง ---------- */
+  $('#copyBtn').addEventListener('click', function () {
+    var head = ['วันที่', 'Tmax (°C)', 'Tmin (°C)', 'แดด (ชม.)', 'ฝน (มม.)'];
+    GROUPS.forEach(function (g) { ['ส่วนสูงเฉลี่ย (ซม.)', 'น้ำหนักสด (ก./ต้น)', 'N ดิน (มก./กก.)', 'ความชื้นดิน (%)'].forEach(function (m) { head.push(gname(g) + ' ' + m); }); });
+    var lines = [head.join('\t')];
+    for (var d = 0; d <= DAYS; d++) {
+      var w = d ? S.weather[d - 1] : null, row = [d, w ? nf(w.tmax, 1) : '', w ? nf(w.tmin, 1) : '', w ? nf(w.sun, 1) : '', w ? nf(w.rain, 1) : ''];
+      GROUPS.forEach(function (g) { var x = S[g.k]; row.push(nf(x.H[d], 2), nf(x.W[d], 2), nf(x.N[d], 1), nf(x.M[d], 0)); });
+      lines.push(row.join('\t'));
+    }
+    var text = lines.join('\n'), box = $('#copyBox'), msg = $('#copyMsg');
+    function fallback() { box.hidden = false; box.value = text; box.focus(); box.select(); msg.textContent = 'เลือกข้อความไว้แล้ว กด Ctrl+C หรือแตะค้างเพื่อคัดลอก'; }
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(function () { msg.textContent = 'คัดลอกแล้ว วางใน Excel หรือ Google Sheets ได้เลย'; }, fallback);
+      else fallback();
+    } catch (err) { fallback(); }
+  });
+
+  fullRender();
+})();
+</script>
+
+</body></html>
